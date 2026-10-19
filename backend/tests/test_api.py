@@ -34,6 +34,13 @@ def test_rota_api_inexistente_da_404(client):
     assert client.get("/api/nao-existe").status_code == 404
 
 
+def test_cabecalhos_de_seguranca(client):
+    h = client.get("/api/health").headers
+    assert "script-src 'self'" in h["content-security-policy"]
+    assert h["x-frame-options"] == "DENY"
+    assert h["x-content-type-options"] == "nosniff"
+
+
 # ---------- envio de respostas ----------
 
 def test_cria_resposta_e_grava_temas(client, payload):

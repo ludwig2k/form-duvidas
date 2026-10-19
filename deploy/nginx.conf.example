@@ -1,0 +1,26 @@
+# Config de exemplo para o Nginx na VPS. Ajuste "duvidas.seudominio.com.br" para o
+# dominio/subdominio real e coloque este arquivo em /etc/nginx/sites-available/form-duvidas,
+# depois: sudo ln -s /etc/nginx/sites-available/form-duvidas /etc/nginx/sites-enabled/
+#
+# Depois de habilitar, rode `sudo certbot --nginx -d duvidas.seudominio.com.br` para
+# emitir o certificado HTTPS automaticamente (ele reescreve este arquivo adicionando
+# o bloco de SSL e o redirect http->https).
+#
+# Os cabecalhos de seguranca (CSP etc.) sao enviados pelo proprio app.
+
+server {
+    listen 80;
+    server_name duvidas.seudominio.com.br;
+
+    # As respostas do formulario sao pequenas (so texto).
+    client_max_body_size 64k;
+    server_tokens off;
+
+    location / {
+        proxy_pass http://127.0.0.1:34719;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

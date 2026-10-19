@@ -35,6 +35,27 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-Admin-Token"],
 )
 
+CABECALHOS_SEGURANCA = {
+    "Content-Security-Policy": (
+        "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self'; "
+        "frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+    ),
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "same-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+}
+
+
+@app.middleware("http")
+async def cabecalhos_seguranca(request, call_next):
+    resposta = await call_next(request)
+    # A documentação interativa (/api/docs) carrega o Swagger de uma CDN; fica sem CSP.
+    if not request.url.path.startswith("/api/docs"):
+        for nome, valor in CABECALHOS_SEGURANCA.items():
+            resposta.headers.setdefault(nome, valor)
+    return resposta
+
 ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
 
 
@@ -131,8 +152,8 @@ def exportar_csv(db: Session = Depends(get_db)):
     )
 
 
-# Em produção, serve o build do frontend (frontend/dist) pelo mesmo servidor.
-DIST = Path(os.getenv("FRONTEND_DIST", Path(__file__).resolve().parents[2] / "frontend" / "dist"))
+# Em produção, serve o build do frontend (backend/static, gerado por "npm run build") pelo mesmo servidor.
+DIST = Path(os.getenv("FRONTEND_DIST", Path(__file__).resolve().parents[1] / "static"))
 if DIST.is_dir():
     app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")
 

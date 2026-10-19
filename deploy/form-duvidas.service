@@ -1,0 +1,26 @@
+[Unit]
+Description=Diagnostico GGDP - formulario de duvidas (FastAPI/Uvicorn)
+After=network.target
+
+[Service]
+Type=simple
+# Usuario sem privilegios dedicado a este app (nao usar root).
+User=formduvidas
+Group=formduvidas
+WorkingDirectory=/opt/form-duvidas/backend
+# O app le o backend/.env sozinho (python-dotenv).
+# Porta 34719 escolhida por ser alta/incomum, para nao colidir com outros apps
+# ja hospedados nesta VPS. Confirme que esta livre antes do deploy: sudo ss -tlnp | grep 34719
+# Se trocar, troque tambem em deploy/nginx.conf.example.
+ExecStart=/opt/form-duvidas/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 34719 --proxy-headers --forwarded-allow-ips=127.0.0.1 --no-server-header
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=5
+
+# Hardening basico
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

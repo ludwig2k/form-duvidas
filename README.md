@@ -32,30 +32,13 @@ Acesse http://localhost:5180.
 
 ## Produção (VPS Ubuntu com Nginx)
 
-O código vai para a VPS pelo GitHub. Com o subdomínio já apontado para o IP da VPS, rode na VPS (troque o domínio e use uma porta interna livre, que nenhum outro projeto use):
+Passo a passo em [DEPLOY.md](DEPLOY.md). Resumo: o build do frontend vai versionado em `backend/static/`, a VPS só faz `git clone`/`git pull` (não precisa de Node) e o FastAPI roda pelo systemd em `127.0.0.1:34719`, atrás do Nginx.
+
+Antes de cada `git push` com mudança no frontend, gere o build:
 
 ```bash
-ss -ltn | grep -q ':8017 ' && echo OCUPADA || echo LIVRE      # confere a porta
-git clone https://github.com/ludwig2k/form-duvidas.git /opt/form-duvidas/repo
-bash /opt/form-duvidas/repo/deploy/scripts/instalar.sh duvidas.exemplo.gov.br 8017
+cd frontend && npm run build      # atualiza backend/static/
 ```
-
-O instalador configura dependências, serviço, Nginx, HTTPS (certbot, sem precisar de e-mail) e backup, e no final mostra o token do admin uma única vez.
-
-Para atualizar: `git push` no PC e, na VPS, `form-duvidas-atualizar` (publica a `origin/main`; com rollback automático se a nova versão não subir). Para voltar a uma versão: `form-duvidas-atualizar <commit|tag>`.
-
-Opcional, do Windows: `.\deploy\publicar.ps1 -Servidor root@IP` roda os testes locais e dispara a atualização por `ssh` (com `-Instalar -Dominio X -PortaApp 8017` faz a instalação inicial).
-
-Na VPS:
-
-- Clone do GitHub em `/opt/form-duvidas/repo`. Cada versão é extraída em `/opt/form-duvidas/releases/<data>-<commit>`, com `/opt/form-duvidas/app` apontando para a versão ativa (guarda as 3 últimas; o commit fica em `REVISION`).
-- O build do frontend roda na VPS, sem root, com um Node.js 22 próprio em `/opt/form-duvidas/node` (não interfere no sistema).
-- Configuração em `/etc/form-duvidas/form-duvidas.env`. O token do admin é gerado na instalação e exibido uma única vez.
-- Banco em `/var/lib/form-duvidas/respostas.db`, com backup diário às 03:15 em `/var/backups/form-duvidas` (30 dias).
-- O serviço `form-duvidas` (uvicorn só em `127.0.0.1`, na porta escolhida) fica atrás do Nginx, que serve o frontend e aplica CSP, cabeçalhos de segurança e limite de requisições.
-- Logs: `journalctl -u form-duvidas -f` e `/var/log/nginx/form-duvidas.*.log`.
-
-Sem Nginx, o FastAPI também serve o build sozinho: `npm run build` e depois `uvicorn app.main:app --host 0.0.0.0 --port 8000` em `backend/`.
 
 ## Página de administração
 
@@ -80,7 +63,7 @@ Documentação interativa: http://localhost:8000/api/docs
 
 ## Variáveis de ambiente (backend)
 
-Podem ser definidas no ambiente ou no arquivo `backend/.env` (não versionado):
+Podem ser definidas no ambiente ou no arquivo `backend/.env` (não versionado; modelo em [`backend/.env.example`](backend/.env.example)):
 
 ```
 ADMIN_TOKEN=um-token-longo-e-secreto
@@ -91,7 +74,8 @@ ADMIN_TOKEN=um-token-longo-e-secreto
 | `ADMIN_TOKEN` | *(vazio)* | Token para consultar/exportar respostas. Vazio = consulta desabilitada |
 | `DATABASE_URL` | `sqlite:///backend/data/respostas.db` | Caminho do banco |
 | `CORS_ORIGINS` | `http://localhost:5180` | Origens permitidas, separadas por vírgula |
-| `FRONTEND_DIST` | `frontend/dist` | Pasta do build servida pelo backend |
+| `API_DOCS` | `true` | Documentação interativa em `/api/docs` (`false` em produção) |
+| `FRONTEND_DIST` | `backend/static` | Pasta do build servida pelo backend |
 
 Exemplo de exportação:
 

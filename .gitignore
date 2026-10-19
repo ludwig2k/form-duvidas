@@ -8,3 +8,6 @@ backend/data/
 frontend/test-results/
 frontend/playwright-report/
 .pytest_cache/
+# backend/static/ (build do frontend) é versionado de propósito, para o
+# deploy na VPS ser só um "git pull" — ver DEPLOY.md. Rode "npm run build"
+# antes de commitar quando o frontend mudar.

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Instalado em /usr/local/sbin pelo instalar.sh. Busca a versão no GitHub e publica.
+# Uso (como root): form-duvidas-atualizar [commit|tag|origin/main]   (padrão: origin/main)
+#
+# O checkout acontece antes de o atualizar.sh ser lido, então ele sempre roda na
+# versão que está sendo publicada.
+set -euo pipefail
+
+REPO=/opt/form-duvidas/repo
+REF="${1:-origin/main}"
+
+[[ $EUID -eq 0 ]] || { echo "Execute como root (sudo)." >&2; exit 1; }
+git -C "$REPO" fetch --quiet --tags --prune origin
+git -C "$REPO" checkout --quiet --force --detach "$REF"
+exec bash "$REPO/deploy/scripts/atualizar.sh"

@@ -2,3 +2,4 @@
 *.conf text eol=lf
 *.service text eol=lf
 *.env.example text eol=lf
+deploy/scripts/form-duvidas-atualizar text eol=lf

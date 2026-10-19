@@ -32,19 +32,27 @@ Acesse http://localhost:5180.
 
 ## Produção (VPS Ubuntu com Nginx)
 
-Tudo fica em [`deploy/`](deploy/). Do Windows, o `publicar.ps1` roda os testes, gera o build, monta um `.tar.gz` e o instala na VPS por `scp`/`ssh`:
+O código vai para a VPS pelo GitHub: você faz `git push` e a VPS busca o commit, gera o build do frontend e reinicia o serviço. Tudo fica em [`deploy/`](deploy/). Do Windows, o `publicar.ps1` confere se o commit já está no GitHub, roda os testes e manda a VPS publicá-lo por `ssh`:
 
 ```powershell
-# Primeira vez: instala, configura Nginx + systemd + backup e emite o HTTPS
+git push
+
+# Primeira vez: clona o repositório na VPS, instala Nginx + systemd + backup e emite o HTTPS
 .\deploy\publicar.ps1 -Servidor root@IP -Instalar -Dominio duvidas.exemplo.gov.br -EmailCertbot ti@exemplo.gov.br
 
 # Atualizações seguintes (com rollback automático se o health check falhar)
 .\deploy\publicar.ps1 -Servidor root@IP
+
+# Publicar uma versão específica (commit ou tag), ex. para voltar atrás
+.\deploy\publicar.ps1 -Servidor root@IP -Ref v1.0.0 -PularTestes
 ```
+
+Direto na VPS, `sudo form-duvidas-atualizar` publica a `origin/main` (ou `sudo form-duvidas-atualizar <commit|tag>`).
 
 Na VPS:
 
-- Código em `/opt/form-duvidas/releases/<data>`, com `/opt/form-duvidas/app` apontando para a versão ativa (guarda as 3 últimas).
+- Clone do GitHub em `/opt/form-duvidas/repo`. Cada versão é extraída em `/opt/form-duvidas/releases/<data>-<commit>`, com `/opt/form-duvidas/app` apontando para a versão ativa (guarda as 3 últimas; o commit fica em `REVISION`).
+- O build do frontend roda na VPS, sem root, com um Node.js 22 próprio em `/opt/form-duvidas/node` (não interfere no sistema).
 - Configuração em `/etc/form-duvidas/form-duvidas.env`. O token do admin é gerado na instalação e exibido uma única vez.
 - Banco em `/var/lib/form-duvidas/respostas.db`, com backup diário às 03:15 em `/var/backups/form-duvidas` (30 dias).
 - O serviço `form-duvidas` (uvicorn em `127.0.0.1:8010`) fica atrás do Nginx, que serve o frontend e aplica CSP, cabeçalhos de segurança e limite de requisições.

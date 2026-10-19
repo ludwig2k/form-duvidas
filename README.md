@@ -32,22 +32,19 @@ Acesse http://localhost:5180.
 
 ## Produção (VPS Ubuntu com Nginx)
 
-O código vai para a VPS pelo GitHub: você faz `git push` e a VPS busca o commit, gera o build do frontend e reinicia o serviço. Tudo fica em [`deploy/`](deploy/). Do Windows, o `publicar.ps1` confere se o commit já está no GitHub, roda os testes e manda a VPS publicá-lo por `ssh`:
+O código vai para a VPS pelo GitHub. Com o subdomínio já apontado para o IP da VPS, rode na VPS (troque o domínio e use uma porta interna livre, que nenhum outro projeto use):
 
-```powershell
-git push
-
-# Primeira vez: clona o repositório na VPS, instala Nginx + systemd + backup e emite o HTTPS
-.\deploy\publicar.ps1 -Servidor root@IP -Instalar -Dominio duvidas.exemplo.gov.br -EmailCertbot ti@exemplo.gov.br
-
-# Atualizações seguintes (com rollback automático se o health check falhar)
-.\deploy\publicar.ps1 -Servidor root@IP
-
-# Publicar uma versão específica (commit ou tag), ex. para voltar atrás
-.\deploy\publicar.ps1 -Servidor root@IP -Ref v1.0.0 -PularTestes
+```bash
+ss -ltn | grep -q ':8017 ' && echo OCUPADA || echo LIVRE      # confere a porta
+git clone https://github.com/ludwig2k/form-duvidas.git /opt/form-duvidas/repo
+bash /opt/form-duvidas/repo/deploy/scripts/instalar.sh duvidas.exemplo.gov.br 8017
 ```
 
-Direto na VPS, `sudo form-duvidas-atualizar` publica a `origin/main` (ou `sudo form-duvidas-atualizar <commit|tag>`).
+O instalador configura dependências, serviço, Nginx, HTTPS (certbot, sem precisar de e-mail) e backup, e no final mostra o token do admin uma única vez.
+
+Para atualizar: `git push` no PC e, na VPS, `form-duvidas-atualizar` (publica a `origin/main`; com rollback automático se a nova versão não subir). Para voltar a uma versão: `form-duvidas-atualizar <commit|tag>`.
+
+Opcional, do Windows: `.\deploy\publicar.ps1 -Servidor root@IP` roda os testes locais e dispara a atualização por `ssh` (com `-Instalar -Dominio X -PortaApp 8017` faz a instalação inicial).
 
 Na VPS:
 
@@ -55,7 +52,7 @@ Na VPS:
 - O build do frontend roda na VPS, sem root, com um Node.js 22 próprio em `/opt/form-duvidas/node` (não interfere no sistema).
 - Configuração em `/etc/form-duvidas/form-duvidas.env`. O token do admin é gerado na instalação e exibido uma única vez.
 - Banco em `/var/lib/form-duvidas/respostas.db`, com backup diário às 03:15 em `/var/backups/form-duvidas` (30 dias).
-- O serviço `form-duvidas` (uvicorn em `127.0.0.1:8010`) fica atrás do Nginx, que serve o frontend e aplica CSP, cabeçalhos de segurança e limite de requisições.
+- O serviço `form-duvidas` (uvicorn só em `127.0.0.1`, na porta escolhida) fica atrás do Nginx, que serve o frontend e aplica CSP, cabeçalhos de segurança e limite de requisições.
 - Logs: `journalctl -u form-duvidas -f` e `/var/log/nginx/form-duvidas.*.log`.
 
 Sem Nginx, o FastAPI também serve o build sozinho: `npm run build` e depois `uvicorn app.main:app --host 0.0.0.0 --port 8000` em `backend/`.

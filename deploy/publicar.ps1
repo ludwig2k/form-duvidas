@@ -5,7 +5,7 @@
 
 .EXAMPLE
   # Primeira vez: clona o repositório na VPS, instala tudo e já emite o HTTPS
-  .\deploy\publicar.ps1 -Servidor root@203.0.113.10 -Instalar -Dominio duvidas.exemplo.gov.br -EmailCertbot ti@exemplo.gov.br
+  .\deploy\publicar.ps1 -Servidor root@203.0.113.10 -Instalar -Dominio duvidas.exemplo.gov.br
 
 .EXAMPLE
   # Atualizações seguintes (depois do git push)

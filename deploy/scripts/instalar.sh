@@ -4,7 +4,8 @@
 #   sudo bash /opt/form-duvidas/repo/deploy/scripts/instalar.sh <dominio> [porta-interna]
 #   Ex.: sudo bash /opt/form-duvidas/repo/deploy/scripts/instalar.sh duvidas.exemplo.gov.br
 #
-# Opcional: CERTBOT_EMAIL=voce@exemplo.gov.br → já emite o HTTPS.
+# O HTTPS (certbot) é emitido automaticamente. Opcional: CERTBOT_EMAIL=voce@exemplo.gov.br
+# para avisos de expiração, ou SEM_HTTPS=1 para pular.
 # Pode ser executado de novo sem problemas (não sobrescreve o .env nem o banco).
 set -euo pipefail
 
@@ -112,17 +113,19 @@ EOF
 nginx -t
 systemctl reload nginx
 
-if [[ -n "${CERTBOT_EMAIL:-}" ]]; then
+if [[ -z "${SEM_HTTPS:-}" ]]; then
   echo "==> HTTPS com Let's Encrypt"
   command -v certbot >/dev/null || apt-get install -y -qq certbot python3-certbot-nginx >/dev/null
-  certbot --nginx -d "$DOMINIO" --non-interactive --agree-tos -m "$CERTBOT_EMAIL" --redirect
+  # Sem CERTBOT_EMAIL: usa a conta do certbot já existente na VPS ou registra sem e-mail.
+  if [[ -n "${CERTBOT_EMAIL:-}" ]]; then CONTA=(-m "$CERTBOT_EMAIL"); else CONTA=(--register-unsafely-without-email); fi
+  certbot --nginx -d "$DOMINIO" --non-interactive --agree-tos "${CONTA[@]}" --redirect \
+    || echo "   (aviso: HTTPS não emitido; confira o DNS e rode: certbot --nginx -d $DOMINIO --redirect)"
 fi
 
 echo
 echo "================================================================"
 echo " Instalação concluída."
-echo " Site:      http://$DOMINIO   (admin em /admin)"
-[[ -z "${CERTBOT_EMAIL:-}" ]] && echo " HTTPS:     sudo certbot --nginx -d $DOMINIO --redirect"
+echo " Site:      https://$DOMINIO   (admin em /admin)"
 if [[ -n "${NOVO_TOKEN:-}" ]]; then
   echo " Token do admin (guarde em local seguro):"
   echo "   $(grep -E '^ADMIN_TOKEN=' "$ENV_FILE" | cut -d= -f2)"
